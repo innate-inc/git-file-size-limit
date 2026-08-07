@@ -46,10 +46,20 @@ jobs:
           head_sha: ${{ steps.scratch.outputs.head }}
 
       - name: Assert the action failed and reported exactly one violation
+        # Pass step outputs through env instead of interpolating ${{ }}
+        # directly into the shell body: the violations output contains
+        # literal backticks (from its markdown bullet list), which bash
+        # would otherwise treat as command substitution inside the
+        # double-quoted echo below.
+        env:
+          OUTCOME: ${{ steps.run_action.outcome }}
+          STATUS: ${{ steps.run_action.outputs.status }}
+          VIOLATIONS_COUNT: ${{ steps.run_action.outputs.violations_count }}
+          VIOLATIONS: ${{ steps.run_action.outputs.violations }}
         run: |
           set -euo pipefail
-          test "${{ steps.run_action.outcome }}" = "failure"
-          test "${{ steps.run_action.outputs.status }}" = "fail"
-          test "${{ steps.run_action.outputs.violations_count }}" = "1"
-          echo "${{ steps.run_action.outputs.violations }}" | grep -q "big.bin"
+          test "$OUTCOME" = "failure"
+          test "$STATUS" = "fail"
+          test "$VIOLATIONS_COUNT" = "1"
+          echo "$VIOLATIONS" | grep -q "big.bin"
           echo "OK: action correctly failed on big.bin and exempted uv.lock"
