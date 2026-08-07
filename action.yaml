@@ -49,4 +49,7 @@ runs:
         BASE_SHA: ${{ inputs.base_sha }}
         HEAD_SHA: ${{ inputs.head_sha }}
         FAIL_ON_VIOLATION: ${{ inputs.fail_on_violation }}
-      run: "${GITHUB_ACTION_PATH}/check_file_size.sh"
+      # Invoked via `bash` rather than executed directly: files pushed
+      # through the GitHub Contents API lose the executable bit (only git
+      # itself preserves file mode), so this must not depend on it.
+      run: bash "${GITHUB_ACTION_PATH}/check_file_size.sh"

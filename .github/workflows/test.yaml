@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: test/run_tests.sh
+      - run: bash test/run_tests.sh
 
   action-smoke-test:
     # Exercises the composite action itself end to end (not just the

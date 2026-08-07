@@ -2,7 +2,7 @@
 # Exercises check_file_size.sh against a scratch git repo covering:
 # violations, exact + glob exemptions, edits, deletions, the pass path,
 # fail_on_violation=false, and size-unit parsing. Run from the repo root:
-#   test/run_tests.sh
+#   bash test/run_tests.sh
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
