@@ -1,0 +1,55 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: test/run_tests.sh
+
+  action-smoke-test:
+    # Exercises the composite action itself end to end (not just the
+    # underlying script): a real `uses: ./` invocation against a synthetic
+    # base/head commit pair created inside this same checkout, covering
+    # both the violation path and the .sizelimitignore exemption path.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build a synthetic base/head commit pair
+        id: scratch
+        run: |
+          set -euo pipefail
+          git config user.email test@example.com
+          git config user.name test
+          echo "base=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          git checkout -q -b smoke-test-fixtures
+          head -c 200000 /dev/zero > big.bin
+          head -c 300000 /dev/zero > uv.lock
+          echo "uv.lock" > .sizelimitignore
+          git add -A
+          git commit -q -m "smoke test fixtures: one violation, one exemption"
+          echo "head=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Run the action against the synthetic commits (expect a violation)
+        id: run_action
+        uses: ./
+        continue-on-error: true
+        with:
+          max_size: 100KB
+          base_sha: ${{ steps.scratch.outputs.base }}
+          head_sha: ${{ steps.scratch.outputs.head }}
+
+      - name: Assert the action failed and reported exactly one violation
+        run: |
+          set -euo pipefail
+          test "${{ steps.run_action.outcome }}" = "failure"
+          test "${{ steps.run_action.outputs.status }}" = "fail"
+          test "${{ steps.run_action.outputs.violations_count }}" = "1"
+          echo "${{ steps.run_action.outputs.violations }}" | grep -q "big.bin"
+          echo "OK: action correctly failed on big.bin and exempted uv.lock"

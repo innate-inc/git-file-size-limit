@@ -1,0 +1,52 @@
+name: "Git File Size Limit"
+description: "Fails a pull request when a changed file exceeds a size limit. Exemptions use real gitignore syntax."
+author: "innate-inc"
+branding:
+  icon: "file"
+  color: "red"
+
+inputs:
+  max_size:
+    description: "Maximum allowed size for a changed file. Accepts a byte count or a suffixed value (e.g. '100KB', '2MB', '1GB')."
+    required: false
+    default: "100KB"
+  ignore_file:
+    description: "Path to a gitignore-syntax file listing exemptions (patterns, anchoring with a leading '/', directories with a trailing '/', negation with '!'). Files it matches are never flagged, however large."
+    required: false
+    default: ".sizelimitignore"
+  base_sha:
+    description: "Base commit SHA to diff against. Defaults to the pull request's base SHA."
+    required: false
+    default: ${{ github.event.pull_request.base.sha }}
+  head_sha:
+    description: "Head commit SHA to diff against. Defaults to the pull request's head SHA."
+    required: false
+    default: ${{ github.event.pull_request.head.sha }}
+  fail_on_violation:
+    description: "Whether to fail the action when a file exceeds the limit. Set to 'false' to only report."
+    required: false
+    default: "true"
+
+outputs:
+  status:
+    description: "'pass' or 'fail'."
+    value: ${{ steps.check.outputs.status }}
+  violations_count:
+    description: "Number of files that exceeded the limit."
+    value: ${{ steps.check.outputs.violations_count }}
+  violations:
+    description: "Markdown-formatted bullet list of files that exceeded the limit; empty when none did."
+    value: ${{ steps.check.outputs.violations }}
+
+runs:
+  using: "composite"
+  steps:
+    - id: check
+      shell: bash
+      env:
+        MAX_SIZE: ${{ inputs.max_size }}
+        IGNORE_FILE: ${{ inputs.ignore_file }}
+        BASE_SHA: ${{ inputs.base_sha }}
+        HEAD_SHA: ${{ inputs.head_sha }}
+        FAIL_ON_VIOLATION: ${{ inputs.fail_on_violation }}
+      run: "${GITHUB_ACTION_PATH}/check_file_size.sh"
